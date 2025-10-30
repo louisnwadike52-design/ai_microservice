@@ -1,0 +1,52 @@
+runtime: custom
+service: chatagent
+env: flex
+
+entrypoint: python manage.py start
+
+# Remove direct env_variables and use .env file instead
+# env_variables:
+#   GROQ_API_KEY: "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"
+#   OPENAI_API_KEY: "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"
+#   LIVEKIT_URL: "wss://lazervault-sgb9bwog.livekit.cloud"
+#   LIVEKIT_API_KEY: "APISsoEAGnWuLgj"
+#   LIVEKIT_API_SECRET: "smafWfeOkluZ8XKiqfJtOA8GPS6ufnMdJeeZAl2R2mCX"
+#   BASE_API_URL_ROOT: "https://lazervault-golang-http-805149139138.europe-west1.run.app"
+
+# Add runtime configuration
+runtime_config:
+  python_version: "3.9"
+
+# Removed image configuration (not supported by App Engine Flex)
+
+liveness_check:
+  initial_delay_sec: 300
+  check_interval_sec: 30
+  timeout_sec: 10
+  failure_threshold: 4
+  success_threshold: 1
+
+# Add manual scaling to ensure proper updates
+manual_scaling:
+  instances: 1
+
+# env_variables:
+#   MY_API_KEY: 'your_api_key_value'
+#   ANOTHER_VARIABLE: 'another_value'
+
+# Optional: Add network settings if needed, e.g., for VPC access
+# network:
+#   session_affinity: true # Example
+
+# Optional: Define resources (Flex defaults are often more generous than Standard F1)
+# resources:
+#   cpu: 1
+#   memory_gb: 2
+#   disk_size_gb: 10
+
+# Automatic scaling is the default for Flex. You can add settings here if needed.
+# automatic_scaling:
+#   min_num_instances: 1
+#   max_num_instances: 5
+#   cpu_utilization:
+#     target_utilization: 0.6 
