@@ -9,7 +9,7 @@ from datetime import datetime
 # Third-party imports
 import requests  # HTTP requests for URL fetching
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import json
 
@@ -22,15 +22,26 @@ EMBED_MODEL = "all-MiniLM-L6-v2"  # Using a common Sentence Transformer model
 USER_TRANSACTIONS_COLLECTION = "user_transaction_history"
 USER_CHAT_HISTORY_COLLECTION = "user_chat_history"
 
-# Initialize embeddings
-embeddings = HuggingFaceEmbeddings(
-    model_name=EMBED_MODEL,
-    model_kwargs={'device': 'cpu'}  # Force CPU to avoid MPS issues
-)
+# Initialize embeddings as a singleton to avoid reloading the model
+_embeddings_instance = None
+
+def get_embeddings():
+    """Get or create a singleton embeddings instance."""
+    global _embeddings_instance
+    if _embeddings_instance is None:
+        _embeddings_instance = HuggingFaceEmbeddings(
+            model_name=EMBED_MODEL,
+            model_kwargs={'device': 'cpu'}  # Force CPU to avoid MPS issues
+        )
+        logger.info("Initialized embeddings model")
+    return _embeddings_instance
+
+# For backward compatibility
+embeddings = get_embeddings()
 
 def get_vector_store(collection_name: str) -> FAISS:
     """Initialize and return the vector store for a specific collection."""
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embeddings = get_embeddings()
     
     # Create vector store directory if it doesn't exist
     vector_store_dir = f"vector_store/{collection_name}"

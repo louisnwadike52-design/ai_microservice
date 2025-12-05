@@ -29,5 +29,4 @@ urlpatterns = [
     path("", root, name="root"),  # Root path
     path('admin/', admin.site.urls),
     path("api/", api.urls),  # Add the chatbot api urls
-    # path('api/v1/voice-agent/', include('voice_agent_service.urls', namespace='voice_agent_service')), # Removed
 ]

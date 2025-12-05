@@ -1,17 +1,17 @@
 # chatbot/tools.py
 from langchain.tools import BaseTool
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field
 from typing import Type, Any, Union, Optional, List, Dict
 from langchain_core.callbacks import CallbackManagerForToolRun
 import logging
 import json
 from datetime import datetime
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 import os
 
 # Import the actual query function and collection names from services
-from .services import query_vector_store, USER_TRANSACTIONS_COLLECTION, USER_CHAT_HISTORY_COLLECTION
+from .services import query_vector_store, USER_TRANSACTIONS_COLLECTION, USER_CHAT_HISTORY_COLLECTION, get_embeddings
 
 logger = logging.getLogger(__name__)
 
@@ -25,23 +25,20 @@ class VectorStoreQueryInput(BaseModel):
 
 def get_vector_store(collection_name: str) -> FAISS:
     """Initialize and return the vector store for a specific collection.
-    
+
     Args:
         collection_name: Name of the collection to initialize or load
-        
+
     Returns:
         FAISS: Initialized vector store
-        
+
     This function will:
     1. Try to load an existing index
     2. Create a new one if none exists
     3. Handle edge cases like empty collections
     4. Ensure the vector store is always in a valid state
     """
-    embeddings = HuggingFaceEmbeddings(
-        model_name="all-MiniLM-L6-v2",
-        model_kwargs={'device': 'cpu'}  # Force CPU to avoid MPS issues
-    )
+    embeddings = get_embeddings()
     
     # Create vector store directory if it doesn't exist
     vector_store_dir = f"vector_store/{collection_name}"
