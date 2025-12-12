@@ -1,10 +1,10 @@
 from ninja import NinjaAPI, Schema
 from ninja.errors import ValidationError
-from pydantic import Field  # Import Field for validation/defaults if needed later
+from pydantic import Field, field_validator  # Import Field for validation/defaults if needed later
 from . import services  # Import the services module
 # from .rag_pipeline import rag_chain_instance # No longer needed
 from .agent import (
-    get_agent_response, cleanup_old_memories, export_chat_history, 
+    get_agent_response, cleanup_old_memories, export_chat_history,
     import_chat_history, compress_memory, merge_chat_histories,
     search_chat_history, backup_all_memories, restore_from_backup,
     list_available_backups, schedule_automatic_backup, get_backup_schedule
@@ -16,7 +16,10 @@ import json
 from datetime import datetime
 
 # Import collection names from services
-from .services import USER_TRANSACTIONS_COLLECTION, USER_CHAT_HISTORY_COLLECTION 
+from .services import USER_TRANSACTIONS_COLLECTION, USER_CHAT_HISTORY_COLLECTION
+
+# Import AI Scan router
+from .ai_scan_api import ai_scan_router
 
 api = NinjaAPI()
 
@@ -51,6 +54,20 @@ class QuerySchema(Schema):
     user_id: str
     access_token: Optional[str] = Field(default=None, description="Access token for external API calls")
     tx_history: List[Dict[str, Any]] = Field(default=[], description="Recent transactions for context (last 5 transactions)")
+
+    @field_validator('tx_history', mode='before')
+    @classmethod
+    def parse_tx_history(cls, v):
+        """Parse tx_history if it's sent as a JSON string."""
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if not isinstance(parsed, list):
+                    raise ValueError("tx_history must be a list")
+                return parsed
+            except json.JSONDecodeError:
+                raise ValueError("tx_history must be a valid JSON list")
+        return v
 
 class ResponseSchema(Schema):
     response: str
@@ -144,19 +161,42 @@ def index_chat_history(request, data: ChatHistoryFilePathSchema):
         raise HttpError(500, f"Internal server error indexing chat history file. Details: {e}")
 
 @api.post("/chat", response=ResponseSchema)
-def chat(request, data: QuerySchema):
+def chat(request, data: QuerySchema = None):
     """Main chat endpoint that handles user queries."""
     try:
+        # Handle both JSON and multipart form data
+        if data is None:
+            # Manually parse request for multipart/form-data
+            query = request.POST.get('query', '')
+            user_id = request.POST.get('user_id', '')
+            access_token = request.POST.get('access_token', None)
+            tx_history_str = request.POST.get('tx_history', '[]')
+
+            # Parse tx_history from JSON string
+            try:
+                tx_history = json.loads(tx_history_str) if isinstance(tx_history_str, str) else tx_history_str
+                if not isinstance(tx_history, list):
+                    tx_history = []
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse tx_history, using empty list: {tx_history_str}")
+                tx_history = []
+        else:
+            # Use validated schema data
+            query = data.query
+            user_id = data.user_id
+            tx_history = data.tx_history
+            access_token = data.access_token
+
         response_text = get_agent_response(
-            user_input=data.query, 
-            user_id=data.user_id,
-            tx_history=data.tx_history,
-            access_token=data.access_token
+            user_input=query,
+            user_id=user_id,
+            tx_history=tx_history,
+            access_token=access_token
         )
-        logger.info(f"Agent response for user {data.user_id}: {response_text}")
+        logger.info(f"Agent response for user {user_id}: {response_text}")
         return ResponseSchema(response=response_text)
     except Exception as e:
-        logger.error(f"Error in chat endpoint for user {data.user_id}: {e}", exc_info=True)
+        logger.error(f"Error in chat endpoint: {e}", exc_info=True)
         raise HttpError(500, f"Error processing chat request: {str(e)}")
 
 @api.post("/add-transaction")
@@ -322,3 +362,7 @@ def get_schedule(request):
     except Exception as e:
         logger.error(f"Error getting backup schedule: {e}", exc_info=True)
         raise HttpError(500, f"Error getting backup schedule: {str(e)}")
+
+# ==================== AI Scan to Pay Endpoints ====================
+# Include AI Scan router for image processing and data extraction
+api.add_router("/scan/", ai_scan_router, tags=["AI Scan"])

@@ -99,20 +99,30 @@ def get_vector_store(collection_name: str) -> FAISS:
             raise RuntimeError("Could not initialize vector store in any way") from fallback_error
 
 
+class QueryInput(BaseModel):
+    """Input schema for VectorStoreQueryTool."""
+    query: str = Field(description="The query to search for in the user's transaction and chat history.")
+
+
 class VectorStoreQueryTool(BaseTool):
     """Tool to query the user's transaction documents and chat history stored in separate vector database collections."""
     name: str = "query_user_context"
     description: str = "Search the user's specific financial documents (transactions, etc.) AND their recent chat history. This tool provides context from both sources (history first, then transactions). Use it for questions about personal data, balances, spending, past transactions, or things mentioned in your previous chat history."
-    
-    # Define the fields that can be set during initialization
-    user_id: str = Field(description="The user ID to filter results for.")
-    tx_history: List[Dict[str, Any]] = Field(default_factory=list, description="The user's transaction history.")
-    
-    def __init__(self, user_id: str, tx_history: List[Dict[str, Any]]):
+    args_schema: Type[BaseModel] = QueryInput
+
+    # Declare these as optional fields that won't be validated from kwargs
+    user_id: Optional[str] = None
+    tx_history: Optional[List[Dict[str, Any]]] = None
+
+    # Class-level configuration to allow arbitrary types
+    class Config:
+        arbitrary_types_allowed = True
+        extra = 'allow'  # Allow extra fields
+
+    def __init__(self, user_id: str, tx_history: List[Dict[str, Any]], **kwargs):
         """Initialize the tool with user ID and transaction history."""
-        super().__init__()
-        self.user_id = user_id
-        self.tx_history = tx_history
+        # Pass user_id and tx_history to parent initializer
+        super().__init__(user_id=user_id, tx_history=tx_history, **kwargs)
 
     def save_to_chat_history(self, user_input: str, assistant_response: str) -> None:
         """Save a chat exchange to the chat history vector store."""
