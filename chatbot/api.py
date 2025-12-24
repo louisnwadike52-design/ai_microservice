@@ -21,7 +21,11 @@ from .services import USER_TRANSACTIONS_COLLECTION, USER_CHAT_HISTORY_COLLECTION
 # Import AI Scan router
 from .ai_scan_api import ai_scan_router
 
-api = NinjaAPI()
+api = NinjaAPI(
+    title="LazerVault AI Chatbot API",
+    version="1.0.0",
+    urls_namespace="chatbot"
+)
 
 logger = logging.getLogger(__name__)
 
