@@ -1,5 +1,7 @@
 # Environment variables
-.env
+# NOTE: .env is temporarily tracked for deployment
+# TODO: Move secrets to cloud secret manager
+# .env
 
 # Virtual environment
 aimicroservice/
