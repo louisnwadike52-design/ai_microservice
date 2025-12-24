@@ -4,14 +4,8 @@ env: flex
 
 entrypoint: python manage.py start
 
-# Remove direct env_variables and use .env file instead
-# env_variables:
-#   GROQ_API_KEY: "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"
-#   OPENAI_API_KEY: "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"
-#   LIVEKIT_URL: "wss://lazervault-sgb9bwog.livekit.cloud"
-#   LIVEKIT_API_KEY: "APISsoEAGnWuLgj"
-#   LIVEKIT_API_SECRET: "smafWfeOkluZ8XKiqfJtOA8GPS6ufnMdJeeZAl2R2mCX"
-#   BASE_API_URL_ROOT: "https://lazervault-golang-http-805149139138.europe-west1.run.app"
+# Environment variables should be set via .env file or deployment configuration
+# See .env.example for required variables
 
 # Add runtime configuration
 runtime_config:
